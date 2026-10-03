@@ -11,19 +11,76 @@ from __future__ import annotations
 
 import os
 
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, abort, jsonify, request, send_from_directory
 
 from engine.problems import get_problem, list_problems
-from engine.service import JudgeService
+from engine.service import JudgeService, SubmissionRejected
 
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(os.path.dirname(BACKEND_DIR), "frontend")
 
 app = Flask(__name__)
+# Reject request bodies over 128 KB outright (Flask answers 413).
+app.config["MAX_CONTENT_LENGTH"] = 128 * 1024
+
+# Only these hostnames may be used to reach the server. This blocks
+# "DNS rebinding": a malicious website pointing its own domain at
+# 127.0.0.1 so your browser sends it requests to this local judge. Add
+# more (comma-separated) with OJ_ALLOWED_HOSTS if you deploy it elsewhere.
+ALLOWED_HOSTS = {"127.0.0.1", "localhost", "[::1]"} | {
+    h.strip().lower()
+    for h in os.environ.get("OJ_ALLOWED_HOSTS", "").split(",") if h.strip()
+}
+
+CONTENT_SECURITY_POLICY = "; ".join([
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src https://fonts.gstatic.com",
+    "connect-src 'self'",
+    "img-src 'self' data:",
+    "frame-ancestors 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+])
 
 # One JudgeService for the whole process — it owns the scheduler, the
 # worker threads, and the stats tracker. Everything below just talks to it.
 judge_service = JudgeService(submission_workers=3, test_case_workers=8)
+
+
+# ---------------------------------------------------------------- security --
+def _hostname(host_header: str) -> str:
+    host = host_header.strip().lower()
+    if host.startswith("["):                 # IPv6 literal, e.g. [::1]:5050
+        return host.split("]")[0] + "]"
+    return host.rsplit(":", 1)[0] if ":" in host else host
+
+
+@app.before_request
+def reject_unknown_hosts():
+    if _hostname(request.host) not in ALLOWED_HOSTS:
+        abort(403)
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+    return response
+
+
+@app.errorhandler(403)
+def forbidden(_error):
+    return jsonify({"error": "forbidden host"}), 403
+
+
+@app.errorhandler(413)
+def too_large(_error):
+    return jsonify({"error": "request body too large"}), 413
 
 
 # ---------------------------------------------------------------- frontend --
@@ -58,17 +115,23 @@ def api_list_problems():
 
 @app.post("/api/submissions")
 def api_create_submission():
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"error": "expected a JSON object body"}), 400
     code = payload.get("code", "")
     problem_id = payload.get("problem_id", "")
 
+    if not isinstance(code, str) or not isinstance(problem_id, str):
+        return jsonify({"error": "code and problem_id must be strings"}), 400
     if not code.strip():
         return jsonify({"error": "code must not be empty"}), 400
 
     try:
         submission = judge_service.submit(code=code, problem_id=problem_id)
     except KeyError:
-        return jsonify({"error": f"unknown problem_id: {problem_id!r}"}), 400
+        return jsonify({"error": "unknown problem_id"}), 400
+    except SubmissionRejected as rejected:
+        return jsonify({"error": str(rejected)}), rejected.http_status
 
     tests_total = len(get_problem(problem_id).hidden_tests)
     return jsonify(submission.to_dict(tests_total=tests_total)), 201
