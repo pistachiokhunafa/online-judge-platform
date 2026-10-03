@@ -2,11 +2,11 @@
 Scalable Online Code Judging Platform — Reference Implementation
 ==================================================================
 
-This is a small, REAL, runnable version of the engine described in the
-project write-up. It isn't a mock — submitted code actually executes in
+This is a small, REAL, runnable, single-file version of the judging
+engine — no web UI. It isn't a mock — submitted code actually executes in
 its own subprocess, output is actually compared, and runtime/memory are
-actually measured. It demonstrates the four ideas from the write-up with
-working code instead of theory:
+actually measured. It demonstrates four ideas with working code
+instead of theory:
 
   1. PRIORITY-QUEUE SCHEDULING (binary heap + "aging") instead of FIFO.
   2. A PARALLEL WORKER POOL that fans a submission's test cases out
@@ -25,7 +25,7 @@ new language you would only need to add an entry to LANGUAGE_RUNNERS
 near the bottom of the file; nothing else in the engine changes.
 
 Run it directly to see a live demo:
-    python3 online_judge.py
+    python3 examples/online_judge_cli.py
 """
 
 from __future__ import annotations
@@ -118,7 +118,7 @@ class JudgeResult:
 # 3. THE SCHEDULER — a binary heap with "aging" baked in for free
 # ============================================================================
 #
-# The write-up defines a priority score:
+# The scheduler uses a priority score:
 #
 #       P(s) = wait_time(s) - runtime_penalty(s)
 #            = (now - submitted_time(s)) - runtime_penalty(s)
@@ -182,8 +182,7 @@ def _set_memory_limit(memory_limit_mb: int):
 def run_test_case(code: str, test: TestCase) -> TestResult:
     """
     Executes `code` (a Python program) in its own subprocess against one
-    TestCase, and returns exactly what the write-up says the platform
-    tracks: a verdict, a runtime, and a memory reading.
+    TestCase, and returns exactly what the platform tracks: a verdict, a runtime, and a memory reading.
     """
     with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as f:
         f.write(code)
@@ -337,8 +336,7 @@ class StatsTracker:
 
 class OnlineJudgeSystem:
     """
-    Two independent pools, matching the two levels of parallelism in the
-    write-up:
+    Two independent pools, matching the two levels of parallelism:
 
       * `submission_workers` pulls the next submission off the priority
         heap and judges it — this is the "c" in the stability condition
