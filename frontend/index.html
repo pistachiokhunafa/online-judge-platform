@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Online Judge — Live Demo</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="kicker">PROJECT DEMO · RUNS LOCALLY</span>
+        <h1>Online Judge</h1>
+      </div>
+      <div class="system-pulse" id="system-pulse">
+        <span class="pulse-dot" aria-hidden="true"></span>
+        <span id="worker-summary">connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <!-- ---------- Main column: problem + editor + result ---------- -->
+    <section class="panel main-panel">
+
+      <div class="problem-select-row">
+        <label for="problem-select">Problem</label>
+        <select id="problem-select" aria-label="Choose a problem"></select>
+      </div>
+
+      <article class="problem-statement" id="problem-statement">
+        <p class="empty-note">Loading problems…</p>
+      </article>
+
+      <div class="editor-card">
+        <div class="editor-toolbar">
+          <span class="editor-label">solution.py</span>
+          <button id="submit-btn" class="btn-primary" type="button">Submit</button>
+        </div>
+        <textarea
+          id="code-editor"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+          aria-label="Python solution editor"
+        ></textarea>
+      </div>
+
+      <section class="result-card" id="result-card" hidden>
+        <div class="result-header">
+          <span class="result-id" id="result-id"></span>
+          <span class="verdict-badge" id="result-verdict" data-verdict="QUEUED">QUEUED</span>
+        </div>
+        <div class="test-grid" id="test-grid"></div>
+        <p class="result-detail" id="result-detail"></p>
+      </section>
+
+    </section>
+
+    <!-- ---------- Side column: queue, stats, activity ---------- -->
+    <aside class="panel side-panel">
+
+      <div class="side-block">
+        <h2>Priority Queue</h2>
+        <p class="side-caption">
+          Waiting submissions, in judging order. Each bar grows the longer a
+          submission waits — that's "aging" in action.
+        </p>
+        <div class="queue-lane" id="queue-lane">
+          <p class="empty-note">Queue is empty.</p>
+        </div>
+      </div>
+
+      <div class="side-block">
+        <h2>Live Stats</h2>
+        <dl class="stat-grid" id="stat-grid"></dl>
+        <div class="verdict-bars" id="verdict-bars"></div>
+      </div>
+
+      <div class="side-block">
+        <h2>Recent Activity</h2>
+        <ul class="activity-feed" id="activity-feed">
+          <li class="empty-note">No submissions yet.</li>
+        </ul>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      Everything runs on your machine: a small Flask backend judges real
+      Python submissions inside isolated, time- and memory-limited
+      subprocesses. Nothing leaves localhost.
+    </p>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
