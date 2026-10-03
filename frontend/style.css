@@ -476,7 +476,7 @@ button { font-family: inherit; }
   overflow: hidden;
 }
 
-.verdict-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s ease; }
+.verdict-bar-fill { display: block; height: 100%; border-radius: 4px; transition: width 0.3s ease; }
 .verdict-bar-fill.AC { background: var(--teal); }
 .verdict-bar-fill.WA, .verdict-bar-fill.RE, .verdict-bar-fill.TLE, .verdict-bar-fill.MLE { background: var(--rose); }
 
