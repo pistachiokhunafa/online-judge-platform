@@ -1,7 +1,7 @@
 """
 judge.py — turns one Submission into a final Verdict.
 
-Two steps, matching the two halves of Amdahl's Law from the write-up:
+Two steps, matching the two halves of Amdahl's Law (serial part + parallel part):
 
   1. A quick SERIAL check (a syntax check stands in for "compile once")
      — this is the part of the work that can't be parallelized.
@@ -62,11 +62,15 @@ def judge(submission: Submission, test_case_pool: Executor) -> None:
     problem = get_problem(submission.problem_id)
 
     # --- serial step -------------------------------------------------------
+    # compile() only parses the code — nothing is executed in this process.
+    # Code size is capped before it gets here (see service.MAX_CODE_BYTES),
+    # and pathological inputs (absurd nesting, etc.) raise one of these.
     try:
         compile(submission.code, "<submission>", "exec")
-    except SyntaxError as error:
+    except (SyntaxError, ValueError, RecursionError, MemoryError) as error:
         submission.test_outcomes = [
-            TestOutcome(Verdict.RUNTIME_ERROR, 0.0, 0, detail=f"SyntaxError: {error}")
+            TestOutcome(Verdict.RUNTIME_ERROR, 0.0, 0,
+                        detail=f"{type(error).__name__}: {error}")
         ]
         submission.verdict = Verdict.RUNTIME_ERROR
         submission.status = submission.verdict

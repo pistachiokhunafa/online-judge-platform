@@ -2,8 +2,7 @@
 scheduler.py — the priority queue that decides which waiting submission
 gets judged next.
 
-The goal is stated in plain terms in the project write-up as a priority
-score:
+The goal, stated as a priority score:
 
     P(submission) = wait_time - priority_penalty
 
